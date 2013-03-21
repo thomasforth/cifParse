@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<script type="text/javascript" language=javascript src=raphael-min.js></script>
+<script type="text/javascript" language=javascript src=rawdata3.js></script>
+
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Better Bus Maps</title>
+</head>
+
+<body onload="init()">
+	<div id="simulatorholder" style="margin:auto">
+    </div>
+</body>
+<script type="text/javascript" language="javascript">
+    // Creates Raphael canvas to draw into
+    var scale = 10000 / window.innerWidth ;
+    var paper = new Raphael(0, 0, 10000 / scale , 8000 / scale);
+
+    function init() {
+
+		xposition = 0;
+        yposition = 0;
+        localstops = [];
+		drawnbusstoplabels = [];
+        stopcodelats = [];
+        stopcodelongs = [];
+        
+        for (var route = 0; route < xcoordslist.length; route++) {
+            focuspoint = 0;
+            createfocusedbusmap(xcoordslist[route], ycoordslist[route], labelslist[route], focuspoint, codeslist[route], colourlist[route], areaslist[route], routes[route]);
+            // the next two lines define the West Yorkshire bus area
+			stopcodelongs[codeslist[route][focuspoint]] = (xcoordslist[route][focuspoint] / 10000) - 1.72;
+            stopcodelats[codeslist[route][focuspoint]] = 53.88 - (ycoordslist[route][focuspoint] / 17360);
+            localstops[codeslist[route][focuspoint]] = true; //localstops is an array that holds the unique bus-stops
+        }
+    }
+
+    // only prints stop after the focus point
+    function createfocusedbusmap(xcoords, ycoords, labels, focus, code, colour, areas, route) {
+    
+        var xcoordsafterfocus = [];
+        var ycoordsafterfocus = [];
+        var labelsafterfocus = [];
+        var codeafterfocus = [];
+        var areasafterfocus = [];
+
+        for (i in xcoords.slice(focus)) {
+            xcoordsafterfocus[i] = xcoords.slice(focus)[i]/scale;
+            ycoordsafterfocus[i] = ycoords.slice(focus)[i]/scale;
+            labelsafterfocus[i] = labels.slice(focus)[i];
+            codeafterfocus[i] = code.slice(focus)[i];
+            areasafterfocus[i] = areas.slice(focus)[i];
+        }
+		projectpoints(xcoordsafterfocus, ycoordsafterfocus, labelsafterfocus, codeafterfocus, colour, areasafterfocus, route);
+    }  
+     
+    // project points and draw them
+    function projectpoints(xcoords, ycoords, labels, codes, colour, areas, route) {
+        for (i = 0; i <= xcoords.length - 1; i++) {
+            // plot the busstops
+            paper.circle(xcoords[i], ycoords[i], 6 / scale).attr({ "fill": "white" }).data({ "busstopcode": codes[i] });
+
+            // draw paths to join the points
+            pathstring = "M" + xcoords[i] + " " + ycoords[i] + "L" + xcoords[i + 1] + " " + ycoords[i + 1];
+            paper.path(pathstring).attr({ "stroke": colour, "opacity": 0.5, "stroke-width": 12 / scale, "height": 1 });
+
+            // plot the busstops labels
+            if (i == xcoords.length - 1 && !drawnbusstoplabels[areas[i]]) { // we only needs labels at the end points
+                paper.text(xcoords[i], ycoords[i], route + " to " + areas[i]).attr({ "text-anchor": "middle", "font-size": 30 / scale, "font-weight": "bold" }).toFront();
+                drawnbusstoplabels[areas[i]] = true;
+            }
+        }
+		//positionmarker.toFront()
+    }
+</script>
+
+</html>

@@ -4,18 +4,26 @@
 <head>
 <script type="text/javascript" language=javascript src=raphael-min.js></script>
 <script type="text/javascript" language=javascript src=rawdata3.js></script>
-
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
 <title>Better Bus Maps</title>
 </head>
 
 <body onload="init()">
-	<p id="currentroute">Current Route<p>
-	<p id="allroutes">Total Route<p>
-	
+<div style="z-index:500">
+	<button onclick="downloadSVG()">Open SVG file ready to save<br/>(wait until projection is finished)</button><br/>
+	<p style="display:inline">Projection Progress : </p>
+	<p style="display:inline" id="currentroute">Current Route</p>
+	<p style="display:inline">/</p>
+	<p style="display:inline" id="allroutes">Total Route</p>
+</div>	
 	<div id="simulatorholder" style="margin:auto">
     </div>
 </body>
+<script type="text/javascript" language="javascript">
+	function downloadSVG(){
+		alert("This feature will come as soon as I implement the technique at http://blog.amazeelabs.com/en/import-svg-file-raphaeljs-modify-it-and-save-it-image-part-2");
+	}
+</script>
 <script type="text/javascript" language="javascript">
     // Creates Raphael canvas to draw into. The area covers the full available width and the points are scaled to fit.
 	var paperWidth = screen.width-30;
@@ -23,7 +31,7 @@
 	var yrange = maxlat-minlat;
 	var verticalScale = 1.65;// This is a correction because the earth is a sphere. 1 Degree of longitude is not the same length as 1 Degree of latitude.
 	var paperHeight = screen.width*Math.abs(verticalScale*yrange/xrange);
-    var paper = new Raphael(10, 10, paperWidth, paperHeight);
+    var paper = new Raphael("simulatorholder", paperWidth, paperHeight);
 
 	// Scale makes text and line width bigger or smaller
 	var scale = 1;

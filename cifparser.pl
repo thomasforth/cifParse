@@ -12,11 +12,11 @@ use strict;
 sub shortenCIF{
 	print "shortening CIF file...\n";
 	open (CIFIN, "ATCO_450_BUS.CIF");
-	open (CIFOUT, ">ATCO_450_BUS_shortened.CIF");
+	open (CIFOUT, ">temp_shortened.CIF");
 
 	# get rid of lines starting QE or QI followed by a letter, I don't need them
 	while (<CIFIN>) {
-		if (($_ =~ m/^QE/) | ($_ =~ m/^QI\d*[A-Z]+\d*\s/)) {
+		if (($_ =~ m/^QE/) | ($_ =~ m/^QI\d*[A-Z]+\d*\s/)) { # but maybe I do need them outside W. Yorkshire?
 			#print $_;
 		}
 		else {
@@ -26,13 +26,13 @@ sub shortenCIF{
 	close (CIFIN);
 	close (CIFOUT);
 
-	open(CIF, "ATCO_450_BUS_shortened.CIF");
+	open(CIF, "temp_shortened.CIF");
 
 	#writes extracts routes, directions, start and end lines in CIF file
 	open(ROUTES, ">routes.txt");
 	my $firstentry  = 1;
 	while(<CIF>) {	
-		if ($_ =~ m/(^QSN.*)/) {
+		if ($_ =~ m/(^QSN.*)/) { #could this also be W. Yorks specific?
 			if ($firstentry == 1) {$firstentry = 0;}
 			else {
 				my $endpos = $.-1;
@@ -86,8 +86,8 @@ sub parseCIF{
 	print "parsing shortened CIF file...\n";
 	#returns an ordered list of NaPTaN codes for each busroute
 	open (LONGESTUNIQUE, "uniqueroutes.txt");
-	open (CIF, "ATCO_450_BUS_shortened.CIF");
-	open (NAPTAN, "NaPTAN.txt");
+	open (CIF, "temp_shortened.CIF");
+	open (NAPTAN, "NaPTAN_complete.txt");
 	open (ROUTES, ">routetable.txt");
 
 	#load NaPTAN details into hashes keyed by bus-stop code
@@ -114,7 +114,7 @@ sub parseCIF{
 		for (my $i = $routedetails[2] - 1; $i <= $routedetails[3]; $i++) {
 			$cif[$i] =~ m/Q[OIT](\d+)/;
 			my $stopcode = $1;
-			$stopcode =~ s/^4500/450/;
+			#$stopcode =~ s/^4500/450/; #I don't think I need this any more
 			if (exists($naptancommonname{$stopcode})) {			
 				print ROUTES "$route\t$stopcounter\t$stopcode\t$naptancommonname{$stopcode}\t$naptanarea{$stopcode}\t$naptanlon{$stopcode}\t$naptanlat{$stopcode}\n";
 				$stopcounter++;
@@ -125,7 +125,12 @@ sub parseCIF{
 	#print out a javascript file with the information in arrays
 	#I know this repeats some stuff from the previous code block but I prefer longer code to complicated code :)
 	open(JAVASCRIPT, ">rawdata3.js");
-
+	
+	my $minlong = 1000;
+	my $maxlong = -1000;
+	my $minlat = 1000;
+	my $maxlat = -1000;
+	
 	my %routecodeshash;
 	foreach (@routes)  {
 		my @routedetails = split(/\t/,$_);
@@ -138,27 +143,31 @@ sub parseCIF{
 		my @stoplats = [];
 		my @stopareas = [];
 		for (my $i = $routedetails[2] - 1; $i <= $routedetails[3]; $i++) {
-			$cif[$i] =~ m/Q[OIT](\d+)/;
+			$cif[$i] =~ m/Q[OIT](\d+)/; # this works for W. Yorkshire but probably not elsewhere!
 			my $stopcode = $1;
-			$stopcode =~ s/^4500/450/;
+			#$stopcode =~ s/^4500/450/;
 			if (exists($naptancommonname{$stopcode})) { #stopcodes are all eight long
 				$stopcodes[$stopcounter] = $stopcode;
 				$stopnames[$stopcounter] = '"'.$naptancommonname{$stopcode}.'"';
-				#$stoplons[$stopcounter]  = $naptanlon{$stopcode}; 
-				#$stoplats[$stopcounter]  = $naptanlat{$stopcode};
-				$stoplons[$stopcounter]  = ($naptanlon{$stopcode} + 2.18) * 10000; # just a temporary
-				$stoplats[$stopcounter]  = (53.97 - $naptanlat{$stopcode}) * 17360;
+				$stoplons[$stopcounter]  = ($naptanlon{$stopcode});
+				$stoplats[$stopcounter]  = ($naptanlat{$stopcode});
 				$stopareas[$stopcounter] = '"'.$naptanarea{$stopcode}.'"';
 				$stopcounter++;
+				#find range of longs and lats
+				if ($naptanlon{$stopcode} < $minlong){ $minlong = $naptanlon{$stopcode}};
+				if ($naptanlon{$stopcode} > $maxlong){ $maxlong = $naptanlon{$stopcode}};
+				if ($naptanlat{$stopcode} < $minlat){ $minlat = $naptanlat{$stopcode}};
+				if ($naptanlat{$stopcode} > $maxlat){ $maxlat = $naptanlat{$stopcode}};
 			}
 		}
-		#print out accumulated arrays, check get cleared next time @route is looped
+		#print out accumulated arrays only if they exist (longer than 1>		
 		jsprint("codes", \@stopcodes, $route, $stopcounter);
 		jsprint("labels", \@stopnames, $route, $stopcounter);
 		jsprint("xcoords", \@stoplons, $route, $stopcounter);
 		jsprint("ycoords", \@stoplats, $route, $stopcounter);
 		jsprint("areas", \@stopareas, $route, $stopcounter);
 	}
+	
 	#create list of routes
 	my %stringsroutecodeshash;
 	my %codeslist;
@@ -192,19 +201,29 @@ sub parseCIF{
 	jsprint("xcoordslist", \@xcoordslist, "", scalar(@xcoordslist));
 	jsprint("ycoordslist", \@ycoordslist, "", scalar(@ycoordslist));
 	jsprint("colourlist", \@colourslist, "", scalar(@colourslist));
-
+	print JAVASCRIPT "var minlong = $minlong;\n"; #min long
+	print JAVASCRIPT "var maxlong = $maxlong;\n";  #max long
+	print JAVASCRIPT "var minlat = $minlat;\n"; # print JAVASCRIPT #min lat
+	print JAVASCRIPT "var maxlat = $maxlat;\n"; # print JAVASCRIPT #max lat		
+	
 	close (CIF);
 	close (LONGESTUNIQUE);
 	close (NAPTAN);
 	close (ROUTES);
 
 	sub jsprint {
-		print JAVASCRIPT "var " .$_[0] . $_[2] . " = [";
-		for (my $i = 0 ; $i < $_[3] - 1; $i++) {
-			print JAVASCRIPT $_[1][$i] . ",";	
+		if (scalar($_[3])>1) {
+			print JAVASCRIPT "var " .$_[0] . $_[2] . " = [";
+			for (my $i = 0 ; $i < $_[3] - 1; $i++) {
+				print JAVASCRIPT $_[1][$i] . ",";	
+			}
+			print JAVASCRIPT $_[1][$_[3] - 1]; #GET RID OF THE LAST COMMA
+			print JAVASCRIPT "];\n"; 
 		}
-		print JAVASCRIPT $_[1][$_[3] - 1]; #GET RID OF THE LAST COMMA
-		print JAVASCRIPT "];\n"; 
+		else {
+			print JAVASCRIPT "var " .$_[0] . $_[2] . " = [";
+			print JAVASCRIPT "];\n"; 
+		}
 	}
 }
 

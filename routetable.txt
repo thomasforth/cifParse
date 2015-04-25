@@ -1,3 +1,4 @@
+route	id	atcocode	name	locality	longitude	latitude
 0	0	250012922	All Saints RCHS	Rawtenstall	-2.30802	53.69735
 0	1	25001434	Turning Circle	Waterfoot (Lancs)	-2.25277	53.69282
 0	2	250011521	Hey Head Avenue	Edgeside	-2.24156	53.69406

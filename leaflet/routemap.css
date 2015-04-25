@@ -1,0 +1,12 @@
+body {
+  padding-top: 50px;
+}
+
+form {
+  margin-bottom: 1em;
+}
+
+#map {
+  width: 800px;
+  height: 600px;
+}

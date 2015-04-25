@@ -3,7 +3,7 @@ var polyline;
 
 function getBusRoutes()
 {
-  var query = "SELECT 'route' FROM " + fusionTableID + " GROUP BY 'route'";
+  var query = "SELECT 'route' FROM " + fusionTableID + " WHERE 'route' LIKE '%I' GROUP BY 'route'";
   var url = "https://www.googleapis.com/fusiontables/v1/query?sql=" + encodeURIComponent(query) + "&key=AIzaSyDAIH2tiaKi8IkKbakTlozr7Bh8dClbjSw&callback=routesCallback";
   requestServerCall(url);
 }
@@ -11,8 +11,8 @@ function getBusRoutes()
 function routesCallback(data)
 {
   for (var i in data["rows"]) {
-    var route = data["rows"][i];
-    var option = $("<option>" + route + "</option>");
+    var route = data["rows"][i][0];
+    var option = $("<option>" + route.substr(0, route.length-1) + "</option>");
     option.appendTo("select#route");
   }
 }
@@ -25,6 +25,11 @@ function getBusStopData(route)
   requestServerCall(url);
 }
 
+function busStopCallback(data) {
+  polyline = L.polyline(data["rows"], {color: 'red'}).addTo(map);
+  map.fitBounds(polyline.getBounds());
+}
+
 // Used by all JSONP calls -- constructs the script tag at Runtime
 function requestServerCall(url) {
   console.log(url);
@@ -35,9 +40,14 @@ function requestServerCall(url) {
   head.removeChild(script);
 }
 
-function busStopCallback(data) {
-  polyline = L.polyline(data["rows"], {color: 'red'}).addTo(map);
-  map.fitBounds(polyline.getBounds());
+function drawRoute()
+{
+  if (polyline != null) {
+    window.map.removeLayer(polyline);
+  }
+  var route = $("#route").val();
+  var dir = $("#dir").val();
+  getBusStopData(route + dir[0]);  
 }
 
 // create a map in the "map" div, set the view to a given place and zoom
@@ -50,10 +60,5 @@ L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 
 getBusRoutes();
 
-$("#route").change(function() {
-  if (polyline != null) {
-    window.map.removeLayer(polyline);
-  }
-  var route = $("#route").val();
-  getBusStopData(route);
-});
+$("#route").change(drawRoute);
+$("#dir").change(drawRoute);
